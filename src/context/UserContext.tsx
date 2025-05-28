@@ -1,18 +1,11 @@
-import { createContext, useContext, useState } from 'react';
+import { useState } from 'react';
+import { UserContext } from './userContextValue';
 
-interface UserContextType {
-  copyUserTag: (tag: string) => void;
-  copySuccess: boolean;
+interface UserContextProviderProps {
+  children: React.ReactNode;
 }
 
-export const UserContext = createContext<UserContextType>({
-  copyUserTag: () => {},
-  copySuccess: false
-});
-
-export const useUserTag = () => useContext(UserContext);
-
-export const UserContextProvider = ({ children }: { children: React.ReactNode }) => {
+export const UserContextProvider = ({ children }: UserContextProviderProps) => {
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Function to copy user tag to clipboard

@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+import { UserContextProvider } from '../context/UserContext';
 
 interface SidebarLink {
   name: string;
@@ -8,37 +9,15 @@ interface SidebarLink {
   icon: string;
 }
 
-// Create a context for user tag copying functionality
-export const UserContext = createContext({
-  copyUserTag: (_tag: string) => {},
-  copySuccess: false
-});
-
-// Hook to use the user tag context
-export const useUserTag = () => useContext(UserContext);
-
 export default function Layout() {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     setIsAuthenticated(!!token);
   }, []);
-
-  // Function to copy user tag to clipboard
-  const copyUserTag = (tag: string) => {
-    navigator.clipboard.writeText(tag)
-      .then(() => {
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy: ', err);
-      });
-  };
 
   const links: SidebarLink[] = [
     { name: 'Dashboard', path: '/dashboard', icon: '📊' },
@@ -56,14 +35,8 @@ export default function Layout() {
   }
 
   return (
-    <UserContext.Provider value={{ copyUserTag, copySuccess }}>
+    <UserContextProvider>
       <div className="flex h-screen bg-gray-100">
-        {/* Copy success notification */}
-        {copySuccess && (
-          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50 animate-fade-in-out">
-            User tag copied to clipboard!
-          </div>
-        )}
         {/* Mobile sidebar toggle button */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -137,6 +110,6 @@ export default function Layout() {
           <Outlet />
         </div>
       </div>
-    </UserContext.Provider>
+    </UserContextProvider>
   );
 }
