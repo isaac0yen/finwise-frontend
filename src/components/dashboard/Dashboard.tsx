@@ -186,14 +186,6 @@ const Dashboard: React.FC = () => {
               icon={<Activity className="h-6 w-6" />}
               description="Available for Trading"
             />
-            <StatsCard
-              title="Top Performer"
-              value={data.marketTrends.reduce((prev, current) =>
-                parseFloat(prev.price) > parseFloat(current.price) ? prev : current
-              ).token}
-              icon={<TrendingUp className="h-6 w-6" />}
-              description="Best Performing Token"
-            />
           </div>
 
           {/* Charts */}
