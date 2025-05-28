@@ -17,7 +17,7 @@ import {
 import { Loader2, TrendingUp, Wallet, Activity, Users } from 'lucide-react';
 import { getDashboardData } from '../../lib/api/dash';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { useUserTag } from '../../pages/Layout';
+import { useUserTag } from '../../context/useUserTag';
 
 ChartJS.register(
   CategoryScale,
