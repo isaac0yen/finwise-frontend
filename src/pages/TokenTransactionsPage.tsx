@@ -2,28 +2,31 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 
 interface TokenTransaction {
-  id: string;
-  type: 'buy' | 'sell';
-  symbol: string;
+  id: number;
+  type: string;
+  tokenSymbol: string;
   tokenName: string;
-  university: string;
-  quantity: number;
-  price: number;
-  totalAmount: number;
-  fee?: number;
-  timestamp: string;
+  quantity: string;
+  price: string;
+  amount: number;
+  fee: string;
+  profitLoss: string;
+  status: string;
+  description: string;
+  date: string;
 }
 
-// This would be implemented in the API module
+import api from '../lib/utils/apiClient';
+
+// Using our API client with error handling
 const fetchTokenTransactions = async (): Promise<TokenTransaction[]> => {
-  const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/token/transactions', {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    }
-  });
-  const data = await response.json();
-  return data.status ? data.data : [];
+  try {
+    const data = await api.get<{ transactions: TokenTransaction[] }>('/token/transactions');
+    return data.status ? data.transactions : [];
+  } catch (error) {
+    console.error('Error fetching token transactions:', error);
+    return [];
+  }
 };
 
 export default function TokenTransactionsPage() {
@@ -102,24 +105,24 @@ export default function TokenTransactionsPage() {
                     <tr key={transaction.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          transaction.type === 'buy' 
+                          transaction.type === 'BUY' 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {transaction.type === 'buy' ? 'Buy' : 'Sell'}
+                          {transaction.type === 'BUY' ? 'BUY' : 'Sell'}
                         </span>
                       </td>
                       <td className="p-3">
                         <div>
-                          <div className="font-medium">{transaction.symbol}</div>
-                          <div className="text-sm text-gray-500">{transaction.university}</div>
+                          <div className="font-medium">{transaction.tokenSymbol}</div>
+                          <div className="text-sm text-gray-500">{transaction.tokenName}</div>
                         </div>
                       </td>
-                      <td className="p-3">{transaction.quantity.toLocaleString()}</td>
+                      <td className="p-3">{Number(transaction.quantity).toLocaleString()}</td>
                       <td className="p-3">{formatCurrency(transaction.price)}</td>
-                      <td className="p-3">{formatCurrency(transaction.totalAmount)}</td>
-                      <td className="p-3">{transaction.fee ? formatCurrency(transaction.fee) : '-'}</td>
-                      <td className="p-3">{formatDate(transaction.timestamp)}</td>
+                      <td className="p-3">{formatCurrency(transaction.amount)}</td>
+                      <td className="p-3">{formatCurrency(transaction.fee)}</td>
+                      <td className="p-3">{formatDate(transaction.date)}</td>
                     </tr>
                   ))}
                 </tbody>

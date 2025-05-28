@@ -17,7 +17,7 @@ import {
 import { Loader2, TrendingUp, Wallet, Activity, Users } from 'lucide-react';
 import { getDashboardData } from '../../lib/api/dash';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import DashboardLayout from './DashboardLayout';
+import { useUserTag } from '../../pages/Layout';
 
 ChartJS.register(
   CategoryScale,
@@ -46,6 +46,7 @@ interface DashboardData {
     last_name: string;
     email: string;
     naira_balance: string;
+    user_tag: string;
   };
   portfolio: {
     token: string;
@@ -59,6 +60,7 @@ const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { copyUserTag } = useUserTag();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -133,8 +135,7 @@ const Dashboard: React.FC = () => {
     },
   };
   return (
-    <DashboardLayout>
-         <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
+    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="flex-1 overflow-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -145,9 +146,20 @@ const Dashboard: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                Welcome, {data.user.first_name}!
-              </h1>
+              <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
+                <h2 className="text-2xl font-semibold">{data.user.first_name} {data.user.last_name}</h2>
+                <button 
+                  onClick={() => copyUserTag(data.user.user_tag)}
+                  className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 transition-colors px-3 py-1 rounded-full text-sm md:text-base cursor-pointer group"
+                  title="Click to copy"
+                >
+                  <span>{data.user.user_tag}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 group-hover:opacity-100 transition-opacity">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                </button>
+              </div>
               <p className="text-zinc-600 dark:text-zinc-400">
                 Here's your financial overview
               </p>
@@ -253,7 +265,6 @@ const Dashboard: React.FC = () => {
         </motion.div>
       </div>
     </div>
-    </DashboardLayout>
   );
 };
 

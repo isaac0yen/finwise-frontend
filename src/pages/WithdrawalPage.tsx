@@ -1,16 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
 
 interface BankAccount {
-  account_name: string;
-  account_number: string;
-  bank_code: string;
+  status: boolean;
+  message: string;
+  data?: {
+    account_name: string;
+    account_number: string;
+    bank_code: string;
+  };
 }
 
-// These would be implemented in the API module
+interface Bank {
+  id: number;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
+const fetchBanks = async (): Promise<Bank[]> => {
+  const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/withdrawal/banks', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  const result = await response.json();
+  return result.status ? result.data : [];
+};
+
 const resolveAccount = async (account_number: string, bank_code: string): Promise<BankAccount> => {
   const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/withdrawal/resolve-account', {
     method: 'POST',
@@ -23,44 +44,35 @@ const resolveAccount = async (account_number: string, bank_code: string): Promis
   return response.json();
 };
 
-const requestWithdrawal = async (amount: number, bank_code: string, account_number: string) => {
+// Make the requestWithdrawal function take the banks array as a parameter
+const requestWithdrawal = async (amount: number, bank_code: string, account_number: string, account_name: string, banksList: Bank[]) => {
+  const bank = banksList.find(b => b.code === bank_code);
+  
+  // Ensure we have a valid bank name
+  if (!bank || !bank.name) {
+    throw new Error('Invalid bank selected. Please select a valid bank.');
+  }
   const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/withdrawal/request', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     },
-    body: JSON.stringify({ amount, bank_code, account_number })
+    body: JSON.stringify({
+      amount,
+      currency: 'NGN',
+      bank_name: bank?.name,
+      account_number,
+      account_name
+    })
   });
   return response.json();
 };
 
-// Mock bank list - would be fetched from an API in a real implementation
-const bankList = [
-  { code: '044', name: 'Access Bank' },
-  { code: '063', name: 'Access Bank (Diamond)' },
-  { code: '050', name: 'Ecobank Nigeria' },
-  { code: '070', name: 'Fidelity Bank' },
-  { code: '011', name: 'First Bank of Nigeria' },
-  { code: '214', name: 'First City Monument Bank' },
-  { code: '058', name: 'Guaranty Trust Bank' },
-  { code: '030', name: 'Heritage Bank' },
-  { code: '301', name: 'Jaiz Bank' },
-  { code: '082', name: 'Keystone Bank' },
-  { code: '101', name: 'Providus Bank' },
-  { code: '076', name: 'Polaris Bank' },
-  { code: '221', name: 'Stanbic IBTC Bank' },
-  { code: '068', name: 'Standard Chartered Bank' },
-  { code: '232', name: 'Sterling Bank' },
-  { code: '100', name: 'Suntrust Bank' },
-  { code: '032', name: 'Union Bank of Nigeria' },
-  { code: '033', name: 'United Bank For Africa' },
-  { code: '215', name: 'Unity Bank' },
-  { code: '035', name: 'Wema Bank' },
-  { code: '057', name: 'Zenith Bank' },
-];
+// Bank list will be populated from API via the useState hook
 
 export default function WithdrawalPage() {
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [amount, setAmount] = useState<string>('');
   const [bankCode, setBankCode] = useState<string>('');
   const [accountNumber, setAccountNumber] = useState<string>('');
@@ -69,6 +81,22 @@ export default function WithdrawalPage() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  useEffect(() => {
+    const loadBanks = async () => {
+      try {
+        const bankData = await fetchBanks();
+        setBanks(bankData);
+      } catch (error) {
+        console.error('Error fetching banks:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadBanks();
+  }, []);
   
   const handleVerifyAccount = async () => {
     if (!accountNumber || !bankCode) {
@@ -113,7 +141,7 @@ export default function WithdrawalPage() {
     setIsProcessing(true);
     
     try {
-      const response = await requestWithdrawal(Number(amount), bankCode, accountNumber);
+      const response = await requestWithdrawal(Number(amount), bankCode, accountNumber, accountName, banks);
       
       if (response.status) {
         setIsSuccess(true);
@@ -128,6 +156,14 @@ export default function WithdrawalPage() {
     }
   };
   
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <p>Loading banks...</p>
+      </div>
+    );
+  }
+  
   if (isSuccess) {
     return (
       <div className="container mx-auto py-8">
@@ -141,7 +177,7 @@ export default function WithdrawalPage() {
           <CardContent>
             <p className="mb-2">Amount: ₦{amount}</p>
             <p className="mb-2">Account: {accountNumber}</p>
-            <p className="mb-2">Bank: {bankList.find(b => b.code === bankCode)?.name}</p>
+            <p className="mb-2">Bank: {banks.find(b => b.code === bankCode)?.name}</p>
             <p>Your withdrawal is being processed and should be completed within 24 hours.</p>
           </CardContent>
           <CardFooter>
@@ -182,7 +218,7 @@ export default function WithdrawalPage() {
                   disabled={isVerified}
                 >
                   <option value="">Select a bank</option>
-                  {bankList.map((bank) => (
+                  {banks.filter(bank => bank.active).map((bank) => (
                     <option key={bank.code} value={bank.code}>
                       {bank.name}
                     </option>

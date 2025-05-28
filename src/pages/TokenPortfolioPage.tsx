@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import api from '../lib/utils/apiClient';
 
 interface TokenHolding {
   id: string;
@@ -22,28 +23,83 @@ interface PortfolioSummary {
   totalProfitLossPercentage: number;
 }
 
-// This would be implemented in the API module
+// Use the API client with error handling
 const fetchTokenPortfolio = async (): Promise<{ holdings: TokenHolding[], summary: PortfolioSummary }> => {
-  const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/token/portfolio', {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+  try {
+    // The actual API response has a different structure
+    const data = await api.get('/token/portfolio');
+
+    if (data.status && data.portfolio) {
+      // Transform tokens object into the expected TokenHolding[] array format
+      const holdings: TokenHolding[] = [];
+      const tokensObj = data.portfolio.tokens || {};
+      
+      // Define type for token details
+      interface TokenDetails {
+        quantity: string;
+        averageBuyPrice: string;
+        currentPrice: string;
+        currentValue: number;
+        totalInvested: string;
+        unrealizedProfit: number;
+        profitPercentage: number;
+      }
+      
+      // Convert tokens object to array
+      Object.entries(tokensObj).forEach(([symbol, details]: [string, TokenDetails]) => {
+        holdings.push({
+          id: symbol, // Using symbol as id since actual id isn't provided
+          symbol: symbol,
+          name: symbol, // We don't have the full name in the response
+          university: symbol,
+          quantity: Number(details.quantity),
+          averageBuyPrice: Number(details.averageBuyPrice),
+          currentPrice: Number(details.currentPrice),
+          totalValue: Number(details.currentValue),
+          profitLoss: Number(details.unrealizedProfit),
+          profitLossPercentage: Number(details.profitPercentage),
+        });
+      });
+
+      // Create summary from portfolio data
+      const summary: PortfolioSummary = {
+        totalPortfolioValue: Number(data.portfolio.totalCurrentValue),
+        totalProfitLoss: Number(data.portfolio.unrealizedProfits),
+        totalProfitLossPercentage: data.profitAnalysis?.totalROI || 0
+      };
+
+      return { holdings, summary };
     }
-  });
-  const data = await response.json();
-  return data.status ? data.data : { holdings: [], summary: { totalPortfolioValue: 0, totalProfitLoss: 0, totalProfitLossPercentage: 0 } };
+
+    // Fallback if response doesn't have expected structure
+    return { 
+      holdings: [], 
+      summary: { 
+        totalPortfolioValue: 0, 
+        totalProfitLoss: 0, 
+        totalProfitLossPercentage: 0 
+      } 
+    };
+  } catch (error) {
+    console.error('Error fetching portfolio data:', error);
+    return { 
+      holdings: [], 
+      summary: { 
+        totalPortfolioValue: 0, 
+        totalProfitLoss: 0, 
+        totalProfitLossPercentage: 0 
+      } 
+    };
+  }
 };
 
 const sellToken = async (tokenId: string, quantity: number, price: number) => {
-  const response = await fetch('https://acad-celestia-backend.mygenius.ng/api/token/sell', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify({ tokenId, quantity, price })
-  });
-  return response.json();
+  try {
+    return await api.post('/token/sell', { tokenId, quantity, price });
+  } catch (error) {
+    console.error('Error selling token:', error);
+    throw error; // Let the calling function handle the error
+  }
 };
 
 export default function TokenPortfolioPage() {
@@ -58,9 +114,10 @@ export default function TokenPortfolioPage() {
   const fetchPortfolioData = async () => {
     try {
       setIsLoading(true);
-      const data = await fetchTokenPortfolio();
-      setHoldings(data.holdings);
-      setSummary(data.summary);
+      const result = await fetchTokenPortfolio();
+      // Now safely set the data, knowing our fetchTokenPortfolio always returns valid objects
+      setHoldings(Array.isArray(result.holdings) ? result.holdings : []);
+      setSummary(result.summary || null);
     } catch (err) {
       console.error('Error fetching portfolio data:', err);
       setError('Failed to load portfolio data');
