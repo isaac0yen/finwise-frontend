@@ -42,7 +42,7 @@ const LoginForm: React.FC = () => {
     try {
       const response = await import('../../lib/api/auth').then(m => m.login(data.email, data.password));
       if (response.status && response.access_token) {
-        localStorage.setItem('authToken', response.access_token);
+        localStorage.setItem('token', response.access_token);
         // Optionally fetch user info or decode token for user data
         toast({
           title: `Login Successful!`,

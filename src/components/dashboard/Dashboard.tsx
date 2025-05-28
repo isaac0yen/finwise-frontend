@@ -14,9 +14,10 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { Loader2, TrendingUp, Wallet, Activity, Users, Sidebar } from 'lucide-react';
+import { Loader2, TrendingUp, Wallet, Activity, Users } from 'lucide-react';
 import { getDashboardData } from '../../lib/api/dash';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import DashboardLayout from './DashboardLayout';
 
 ChartJS.register(
   CategoryScale,
@@ -64,7 +65,7 @@ const Dashboard: React.FC = () => {
       try {
         const token = localStorage.getItem('authToken');
         if (!token) throw new Error('No auth token found');
-        
+
         const response = await getDashboardData(token);
         if (response.status) {
           setData(response as unknown as DashboardData);
@@ -131,10 +132,9 @@ const Dashboard: React.FC = () => {
       },
     },
   };
-
   return (
-    <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
-      <Sidebar />
+    <DashboardLayout>
+         <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="flex-1 overflow-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
             />
             <StatsCard
               title="Top Performer"
-              value={data.marketTrends.reduce((prev, current) => 
+              value={data.marketTrends.reduce((prev, current) =>
                 parseFloat(prev.price) > parseFloat(current.price) ? prev : current
               ).token}
               icon={<TrendingUp className="h-6 w-6" />}
@@ -237,9 +237,9 @@ const Dashboard: React.FC = () => {
                         </td>
                         <td className="text-center py-3 px-4">
                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold
-                            ${trend.sentiment === 'POSITIVE' ? 'bg-green-100 text-green-800' :
+                          ${trend.sentiment === 'POSITIVE' ? 'bg-green-100 text-green-800' :
                               trend.sentiment === 'NEGATIVE' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'}`}>
+                                'bg-yellow-100 text-yellow-800'}`}>
                             {trend.sentiment}
                           </span>
                         </td>
@@ -253,6 +253,7 @@ const Dashboard: React.FC = () => {
         </motion.div>
       </div>
     </div>
+    </DashboardLayout>
   );
 };
 
